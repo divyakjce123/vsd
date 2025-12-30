@@ -171,3 +171,21 @@
     margin: 0 2px;
   }
 }
+
+.search-controls {
+  display: inline-flex;
+}
+
+.search-controls .input-group {
+  width: 250px;
+}
+
+.search-controls .form-control {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.search-controls .btn {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}

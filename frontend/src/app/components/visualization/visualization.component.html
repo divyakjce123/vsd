@@ -11,6 +11,21 @@
             (click)="switchView('2d')">
       <i class="bi bi-grid-3x3"></i> 2D View
     </button>
+    
+    <!-- <div class="search-controls ms-3">
+      <div class="input-group input-group-sm">
+        <input type="text" 
+               class="form-control" 
+               placeholder="Search Pallet ID"
+               [(ngModel)]="searchPalletId"
+               (keyup.enter)="searchPallet()">
+        <button class="btn btn-outline-secondary" 
+                type="button"
+                (click)="searchPallet()">
+          <i class="bi bi-search"></i> Search
+        </button>
+      </div>
+    </div> -->
   </div>
 
   <!-- 3D Visualization Canvas -->
@@ -101,11 +116,5 @@
       </div>
     </div>
   </div>
-
-  <!-- Loading & Status -->
-  <div class="status-area" *ngIf="!layoutData">
-    <div class="alert alert-info">
-      <i class="bi bi-info-circle"></i> Configure warehouse parameters and generate layout to see visualization.
-    </div>
-  </div>
+  <div class="pallet-details-panel" *ngIf=""></div>
 </div>
