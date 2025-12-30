@@ -56,6 +56,17 @@ export class VisualizationComponent
   
   viewMode: "3d" | "2d" = "3d";
 
+  // Search functionality
+  searchPalletId: string = '';
+  highlightedPallet: any = null;
+  selectedPalletDetails: any = null;
+  searchStatus: string = '';
+  searchStatusClass: string = '';
+  private highlightedMesh: THREE.Mesh | null = null;
+  private highlightedSprite: THREE.Sprite | null = null;
+  private highlighted2DElement: PIXI.Graphics | null = null;
+  private animationMixer: THREE.AnimationMixer | null = null;
+
   // Three.js variables
   private scene!: THREE.Scene;
   private camera!: THREE.PerspectiveCamera;
@@ -144,6 +155,8 @@ export class VisualizationComponent
   }
 
   ngOnDestroy() {
+    this.clearHighlight();
+    
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
     }
@@ -1192,6 +1205,7 @@ export class VisualizationComponent
   // ============ PUBLIC METHODS ============
 
   switchView(mode: "3d" | "2d") {
+    this.clearHighlight(); // Clear any existing highlights when switching views
     this.viewMode = mode;
     setTimeout(() => {
       if (mode === "3d" && this.layoutData) {
@@ -1200,6 +1214,15 @@ export class VisualizationComponent
         this.update2DVisualization();
       }
       this.onResize();
+      
+      // Re-apply highlight if there's a selected pallet
+      if (this.highlightedPallet) {
+        if (mode === "3d") {
+          this.highlight3DPallet(this.highlightedPallet);
+        } else {
+          this.highlight2DPallet(this.highlightedPallet);
+        }
+      }
     }, 0);
   }
 
@@ -1222,5 +1245,341 @@ export class VisualizationComponent
     if (this.viewMode === "2d") {
         // Implementation similar to previous logic
     }
+  }
+
+  // ============ SEARCH FUNCTIONALITY ============
+
+  searchPallet() {
+    if (!this.searchPalletId.trim() || !this.layoutData) {
+      this.setSearchStatus('Please enter a pallet ID', 'warning');
+      return;
+    }
+
+    this.clearHighlight();
+    const palletId = this.searchPalletId.trim();
+    const foundPallet = this.findPalletById(palletId);
+
+    if (foundPallet) {
+      this.highlightedPallet = foundPallet;
+      this.selectedPalletDetails = this.createPalletDetails(foundPallet);
+      this.setSearchStatus(`Found pallet: ${palletId}`, 'success');
+      
+      if (this.viewMode === "3d") {
+        this.highlight3DPallet(foundPallet);
+        this.focusCameraOnPallet(foundPallet);
+      } else {
+        this.highlight2DPallet(foundPallet);
+      }
+    } else {
+      this.setSearchStatus(`Pallet "${palletId}" not found`, 'error');
+      // Show example format
+      setTimeout(() => {
+        this.setSearchStatus('Example format: WS1-R1-C1-F1-P1', 'info');
+      }, 2000);
+    }
+  }
+
+  clearSearch() {
+    this.searchPalletId = '';
+    this.clearSelection();
+    this.setSearchStatus('', '');
+  }
+
+  clearSelection() {
+    this.clearHighlight();
+    this.highlightedPallet = null;
+    this.selectedPalletDetails = null;
+    this.setSearchStatus('', '');
+  }
+
+  private setSearchStatus(message: string, type: 'success' | 'error' | 'warning' | 'info' | '') {
+    this.searchStatus = message;
+    this.searchStatusClass = type ? `text-${type === 'error' ? 'danger' : type}` : '';
+    
+    // Auto-clear status after 5 seconds
+    if (message && type !== 'success') {
+      setTimeout(() => {
+        if (this.searchStatus === message) {
+          this.searchStatus = '';
+          this.searchStatusClass = '';
+        }
+      }, 5000);
+    }
+  }
+
+  private findPalletById(palletId: string): any {
+    if (!this.layoutData?.workstations) return null;
+
+    // Normalize the search ID (uppercase, remove spaces)
+    const normalizedSearchId = palletId.toUpperCase().replace(/\s+/g, '');
+
+    for (const workstation of this.layoutData.workstations) {
+      for (const aisle of workstation.aisles) {
+        if (aisle.pallets) {
+          for (let i = 0; i < aisle.pallets.length; i++) {
+            const pallet = aisle.pallets[i];
+            // Generate pallet ID based on location
+            const generatedId = this.generatePalletId(workstation, aisle, i);
+            const normalizedGeneratedId = generatedId.toUpperCase().replace(/\s+/g, '');
+            
+            if (normalizedGeneratedId === normalizedSearchId) {
+              return {
+                ...pallet,
+                id: generatedId,
+                workstation,
+                aisle,
+                palletIndex: i
+              };
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  private generatePalletId(workstation: any, aisle: any, palletIndex: number): string {
+    const wsIndex = this.layoutData?.workstations.indexOf(workstation) || 0;
+    return `WS${wsIndex + 1}-R${aisle.indices.row}-C${aisle.indices.col}-F${aisle.indices.floor}-P${palletIndex + 1}`;
+  }
+
+  private createPalletDetails(foundPallet: any): any {
+    const wsIndex = this.layoutData?.workstations.indexOf(foundPallet.workstation) || 0;
+    return {
+      id: foundPallet.id,
+      type: foundPallet.type || 'Unknown',
+      color: foundPallet.color || '#8b4513',
+      dimensions: {
+        length: foundPallet.dims?.length || 120,
+        width: foundPallet.dims?.width || 80,
+        height: foundPallet.dims?.height || 15
+      },
+      location: `Workstation ${wsIndex + 1}, Row ${foundPallet.aisle.indices.row}, Aisle ${foundPallet.aisle.indices.col}, Floor ${foundPallet.aisle.indices.floor}`,
+      position: `X: ${Math.round(foundPallet.aisle.position.x)}, Y: ${Math.round(foundPallet.aisle.position.y)}, Z: ${Math.round(foundPallet.aisle.position.z)}`,
+      weight: foundPallet.weight || null
+    };
+  }
+
+  private highlight3DPallet(foundPallet: any) {
+    if (!this.scene) return;
+
+    const aisle = foundPallet.aisle;
+    const palletIndex = foundPallet.palletIndex;
+    
+    // Find the pallet mesh in the scene
+    const aisleGroup = this.scene.getObjectByName(aisle.id);
+    if (aisleGroup && aisleGroup.children[palletIndex]) {
+      const palletMesh = aisleGroup.children[palletIndex] as THREE.Mesh;
+      
+      // Create highlight geometry (slightly larger than original)
+      const originalGeo = palletMesh.geometry as THREE.BoxGeometry;
+      const highlightGeo = new THREE.BoxGeometry(
+        originalGeo.parameters.width * 1.1,
+        originalGeo.parameters.height * 1.1,
+        originalGeo.parameters.depth * 1.1
+      );
+
+      // Create glowing material
+      const highlightMat = new THREE.MeshBasicMaterial({
+        color: 0xffeb3b,
+        transparent: true,
+        opacity: 0.6,
+        side: THREE.DoubleSide
+      });
+
+      this.highlightedMesh = new THREE.Mesh(highlightGeo, highlightMat);
+      this.highlightedMesh.position.copy(palletMesh.position);
+      this.highlightedMesh.name = 'pallet-highlight';
+      
+      aisleGroup.add(this.highlightedMesh);
+
+      // Add floating label
+      this.addFloatingLabel(foundPallet.id, palletMesh.position);
+
+      // Start pulsating animation
+      this.startPulseAnimation();
+    }
+  }
+
+  private highlight2DPallet(foundPallet: any) {
+    if (!this.pixiStage) return;
+
+    // Find the aisle rectangle and add animated dashed border
+    const aisle = foundPallet.aisle;
+    if (aisle.indices.floor === 1) { // Only show on ground floor in 2D
+      const canvas = this.twoCanvasRef.nativeElement;
+      const container = canvas.parentElement || canvas;
+      const canvasWidth = container.clientWidth || 800;
+      const canvasHeight = container.clientHeight || 600;
+
+      const whWidth = this.whWidth;
+      const whLength = this.whLength;
+      const padding = 60;
+      const scaleX = (canvasWidth - padding * 2) / whWidth;
+      const scaleY = (canvasHeight - padding * 2) / whLength;
+      const scale = Math.min(scaleX, scaleY);
+      const offsetX = (canvasWidth - whWidth * scale) / 2;
+      const offsetY = (canvasHeight - whLength * scale) / 2;
+
+      const rX = offsetX + aisle.position.x * scale;
+      const rY = offsetY + aisle.position.y * scale;
+      const rW = aisle.dimensions.width * scale;
+      const rL = aisle.dimensions.length * scale;
+
+      // Create animated dashed border
+      this.highlighted2DElement = new PIXI.Graphics();
+      this.highlighted2DElement.lineStyle(3, 0xffeb3b, 1);
+      this.highlighted2DElement.drawRect(rX - 2, rY - 2, rW + 4, rL + 4);
+      
+      this.pixiStage.addChild(this.highlighted2DElement);
+
+      // Add label
+      const label = this.makeTextPIXI(foundPallet.id, 12, 0xffeb3b);
+      label.x = rX + rW / 2;
+      label.y = rY - 15;
+      label.anchor.set(0.5);
+      this.pixiStage.addChild(label);
+    }
+  }
+
+  private addFloatingLabel(text: string, position: THREE.Vector3) {
+    const labelPosition = new THREE.Vector3(
+      position.x,
+      position.y,
+      position.z + 100 // Float above the pallet
+    );
+
+    this.highlightedSprite = this.addLabel(text, labelPosition, {
+      color: '#333333',
+      backgroundColor: '#ffeb3b',
+      fontSize: 28,
+      scale: 150,
+      addToScene: false
+    });
+
+    this.scene.add(this.highlightedSprite);
+  }
+
+  private startPulseAnimation() {
+    if (!this.highlightedMesh) return;
+
+    const startScale = 1;
+    const endScale = 1.05;
+    let growing = true;
+    let currentScale = startScale;
+
+    const animate = () => {
+      if (!this.highlightedMesh) return;
+
+      if (growing) {
+        currentScale += 0.002;
+        if (currentScale >= endScale) {
+          growing = false;
+        }
+      } else {
+        currentScale -= 0.002;
+        if (currentScale <= startScale) {
+          growing = true;
+        }
+      }
+
+      this.highlightedMesh.scale.setScalar(currentScale);
+      
+      if (this.highlightedPallet) {
+        requestAnimationFrame(animate);
+      }
+    };
+
+    animate();
+  }
+
+  private focusCameraOnPallet(foundPallet: any) {
+    if (!this.camera || !this.controls) return;
+
+    const aisle = foundPallet.aisle;
+    const targetPosition = new THREE.Vector3(
+      aisle.position.x,
+      aisle.position.y,
+      aisle.position.z + 50
+    );
+
+    // Smooth camera transition
+    const startPosition = this.camera.position.clone();
+    const startTarget = this.controls.target.clone();
+    
+    let progress = 0;
+    const duration = 1000; // 1 second
+    const startTime = Date.now();
+
+    const animateCamera = () => {
+      const elapsed = Date.now() - startTime;
+      progress = Math.min(elapsed / duration, 1);
+      
+      // Easing function
+      const eased = 1 - Math.pow(1 - progress, 3);
+      
+      // Calculate camera position (move back and up from target)
+      const cameraOffset = new THREE.Vector3(200, -200, 150);
+      const newCameraPos = targetPosition.clone().add(cameraOffset);
+      
+      this.camera.position.lerpVectors(startPosition, newCameraPos, eased);
+      this.controls.target.lerpVectors(startTarget, targetPosition, eased);
+      this.controls.update();
+
+      if (progress < 1) {
+        requestAnimationFrame(animateCamera);
+      }
+    };
+
+    animateCamera();
+  }
+
+  private clearHighlight() {
+    // Clear 3D highlight
+    if (this.highlightedMesh) {
+      this.highlightedMesh.parent?.remove(this.highlightedMesh);
+      this.highlightedMesh.geometry.dispose();
+      (this.highlightedMesh.material as THREE.Material).dispose();
+      this.highlightedMesh = null;
+    }
+
+    if (this.highlightedSprite) {
+      this.scene?.remove(this.highlightedSprite);
+      this.highlightedSprite.material.map?.dispose();
+      this.highlightedSprite.material.dispose();
+      this.highlightedSprite = null;
+    }
+
+    // Clear 2D highlight
+    if (this.highlighted2DElement && this.pixiStage) {
+      this.pixiStage.removeChild(this.highlighted2DElement);
+      this.highlighted2DElement.destroy();
+      this.highlighted2DElement = null;
+    }
+  }
+
+  // Debug method to get all available pallet IDs
+  getAllPalletIds(): string[] {
+    if (!this.layoutData?.workstations) return [];
+
+    const palletIds: string[] = [];
+    for (const workstation of this.layoutData.workstations) {
+      for (const aisle of workstation.aisles) {
+        if (aisle.pallets) {
+          for (let i = 0; i < aisle.pallets.length; i++) {
+            const palletId = this.generatePalletId(workstation, aisle, i);
+            palletIds.push(palletId);
+          }
+        }
+      }
+    }
+    return palletIds;
+  }
+
+  // Method to log all available pallet IDs (for debugging)
+  logAvailablePallets() {
+    const palletIds = this.getAllPalletIds();
+    console.log('Available Pallet IDs:', palletIds);
+    return palletIds;
   }
 }
