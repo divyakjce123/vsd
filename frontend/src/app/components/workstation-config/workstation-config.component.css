@@ -1,0 +1,90 @@
+.workstation-config-card {
+  margin-bottom: 1rem;
+}
+
+.section-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e9ecef;
+}
+
+/* Aisle Gaps Section */
+.aisle-gaps-list {
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.aisle-gap-item {
+  padding: 0.5rem;
+  background-color: #f8f9fa;
+  border-radius: 0.25rem;
+  border-left: 3px solid #0d6efd;
+}
+
+/* Pallet Section */
+.empty-state {
+  background-color: #f8f9fa;
+  border-radius: 0.5rem;
+  border: 2px dashed #dee2e6;
+}
+
+/* Input group customization */
+.input-group.input-group-sm .form-control,
+.input-group.input-group-sm .form-select {
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.input-group.input-group-sm .input-group-text {
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Card hover effect */
+.card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Custom scrollbar for lists */
+.aisle-gaps-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.aisle-gaps-list::-webkit-scrollbar-taisle {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.aisle-gaps-list::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.aisle-gaps-list::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Form labels */
+.form-label.small {
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+}
+
+.form-text {
+  font-size: 0.75rem;
+  color: #6c757d;
+}
+
+/* Badge styling */
+.badge {
+  font-size: 0.75em;
+  font-weight: 500;
+  padding: 0.25em 0.5em;
+}

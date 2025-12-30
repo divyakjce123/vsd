@@ -1,0 +1,111 @@
+<!-- //frontend/src/app/components/visualization/visualization.component.html -->
+<div class="visualization-container">
+  <div class="view-controls">
+    <button class="btn btn-sm btn-outline-primary" 
+            [class.active]="viewMode === '3d'"
+            (click)="switchView('3d')">
+      <i class="bi bi-cube"></i> 3D View
+    </button>
+    <button class="btn btn-sm btn-outline-primary" 
+            [class.active]="viewMode === '2d'"
+            (click)="switchView('2d')">
+      <i class="bi bi-grid-3x3"></i> 2D View
+    </button>
+  </div>
+
+  <!-- 3D Visualization Canvas -->
+  <div class="visualization-area" *ngIf="viewMode === '3d'">
+    <div class="canvas-container">
+      <div id="canvas"></div>
+      <canvas #threeCanvas class="visualization-canvas"></canvas>
+      <div class="axis-indicators">
+        <div class="axis x-axis">
+          <span class="axis-arrow">→</span>
+          <span class="axis-label">X (cm)</span>
+        </div>
+        <div class="axis z-axis">
+          <span class="axis-arrow">↑</span>
+          <span class="axis-label">Z (cm)</span>
+        </div>
+        <div class="axis Y-axis">
+          <span class="axis-arrow">↗</span>
+          <span class="axis-label">Y (cm)</span>
+        </div>
+      </div>
+      <div class="view-controls-3d">
+        <button class="btn btn-sm btn-outline-secondary" (click)="resetCamera()">
+          <i class="bi bi-arrows-fullscreen"></i> Reset View
+        </button>
+        <button class="btn btn-sm btn-outline-secondary" (click)="toggleWireframe()">
+          <i class="bi bi-grid-3x3"></i> Wireframe
+        </button>
+      </div>
+      
+      <!-- 3D Legend -->
+      <div class="legend legend-3d">
+        <h6 class="legend-title">Labels</h6>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #2196f3;"></div>
+          <span>Workstation</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #4caf50;"></div>
+          <span>Floor</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #ff9800;"></div>
+          <span>Row</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #9c27b0;"></div>
+          <span>Aisle</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2D Visualization Canvas -->
+  <div class="visualization-area" *ngIf="viewMode === '2d'">
+    <div class="canvas-container">
+      <canvas #twoCanvas class="visualization-canvas" (click)="onCanvasClick($event)"></canvas>
+      <div class="legend">
+        <h6 class="legend-title">Legend</h6>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #333;"></div>
+          <span>Warehouse Boundary</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #2196f3;"></div>
+          <span>Workstation Label</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #4caf50;"></div>
+          <span>Floor Label</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #ff9800;"></div>
+          <span>Row Label</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #9c27b0;"></div>
+          <span>Aisle Label</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #4a90d9; opacity: 0.5;"></div>
+          <span>Aisle Cell</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #8b4513;"></div>
+          <span>Pallet</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading & Status -->
+  <div class="status-area" *ngIf="!layoutData">
+    <div class="alert alert-info">
+      <i class="bi bi-info-circle"></i> Configure warehouse parameters and generate layout to see visualization.
+    </div>
+  </div>
+</div>
