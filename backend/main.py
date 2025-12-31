@@ -337,6 +337,8 @@ async def delete_warehouse(warehouse_id: str):
         return {"success": True, "message": f"Warehouse {warehouse_id} deleted."}
     raise HTTPException(status_code=404, detail="Warehouse not found")
 
+
+
 if __name__ == '__main__':
     import uvicorn
     # Run on port 5000 to match frontend expectation

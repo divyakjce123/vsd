@@ -7,8 +7,8 @@ class WarehouseCalculator:
             'in': 2.54, 'ft': 30.48, 'yd': 91.44, 'mm': 0.1
         }
 
-        self.MIN_RACK_WIDTH_CM = 1.0
-        self.MIN_RACK_LENGTH_CM = 1.0
+        self.MIN_AISLE_WIDTH_CM = 1.0
+        self.MIN_AISLE_LENGTH_CM = 1.0
         self.MIN_FLOOR_HEIGHT_CM = 10.0
 
     def to_cm(self, value, unit):
